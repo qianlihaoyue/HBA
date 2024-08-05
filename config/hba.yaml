@@ -1,0 +1,4 @@
+data_path: "/home/qianliyue/D:/RepoMy/save/project/mtest/gnss/"
+
+total_layer_num: 3
+thread_num : 16

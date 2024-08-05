@@ -1,5 +1,15 @@
 # HBA: A Globally Consistent and Efficient Large-Scale LiDAR Mapping Module
 
+fork from https://github.com/hku-mars/HBA
+
+## **0.Update**
+
+- 2.0 - 8.5 - 去除ROS依赖
+
+
+
+
+
 ## **1. Introduction**
 **HBA** is developed to resolve the issue that the divergence within the point cloud map cannot be fully eliminated after pose graph optimization (PGO). Though PGO is time-efficient, it does not directly optimize the mapping consistency. LiDAR bundle adjustment (BA) could mitigate this issue; however, it is too time-consuming on large-scale maps. HBA proposes a hierarchical structure to divide the huge LidAR BA problem into multiple smaller BA problems and use the PGO to smoothly update the entire LiDAR poses. HBA could achieve similar accuracy compared with the original BA method but with much less computation time.
 
@@ -56,7 +66,7 @@ To test on your own data, please prepare the file structure as follows: a folder
 Remark: in the `global_ba` function, we use a slightly larger `eigen_ratio=0.2` parameter than that in local BA, which usually leads to a faster convergence. However, you could adjust them in `cut_voxel` function from the `hba.cpp` file. Smaller voxel size and eigen ratio parameters usually lead to a better accuracy but a longer computation time.
 
 ### 3.4 Try Our Data
-The zipped pcd files and their initial poses of our self-collected [park](https://drive.google.com/file/d/1vjmTiNULlrZ_7FMSDDy7w2Xw0_B1oz8D/view?usp=sharing) and the public [KITTI 07](https://drive.google.com/file/d/16Cck3c6ie_GT5HXHTy5VlxJc5vPC1O4r/view?usp=sharing) dataset have been uploaded to OneDrive. You could download them and directly run the code with the parameters provided.
+The zipped pcd files and their initial poses of our self-collected [park](https://connecthkuhk-my.sharepoint.com/:u:/g/personal/xliuaa_connect_hku_hk/EbIOZhucOxJMs_m5_4JheNUBIj1FILxNmgVX0vt4C7madw?e=LD1XQh) and the public [KITTI 07](https://connecthkuhk-my.sharepoint.com/:u:/g/personal/xliuaa_connect_hku_hk/EdDPCY06Xa5CnmKG7_fbmq8BW9jpNZGRsVxtHLt80voKaw?e=nJWZjF) dataset have been uploaded to OneDrive. You could download them and directly run the code with the parameters provided.
 
 Remark: `hba.launch` only optimizes the LiDAR poses but does not visualize the point cloud map and `visualize.launch` is used to view the point cloud map. One more thing, when you launch the `hba.launch`, when the launch completes, it only optimizes the poses once. So if you are not satisfied with the result, you could execute the launch again.
 
@@ -84,6 +94,6 @@ HBA has participated in [HILTI SLAM Challenge](https://hilti-challenge.com/) and
 In the development of **HBA**, we stand on the state-of-the-art work: [BALM2](https://github.com/hku-mars/BALM).
 
 ## **6. License**
-The source code is released under [GPLv2](LICENSE) license.
+The source code is released under GPLv2 license.
 
 We are still working on improving the performance and reliability of our codes. For any technical issues, please contact us via email xliuaa@connect.hku.hk. For commercial use, please contact Dr. Fu Zhang fuzhang@hku.hk.
