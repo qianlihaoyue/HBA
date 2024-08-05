@@ -136,7 +136,7 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
     int& layer_num = layer.layer_num;
     int& left_gap_num = layer.left_gap_num;
 
-    double load_t = 0, undis_t = 0, dsp_t = 0, cut_t = 0, recut_t = 0, total_t = 0, tran_t = 0, sol_t = 0, save_t = 0;
+    double load_t = 0, dsp_t = 0, cut_t = 0, recut_t = 0, total_t = 0, tran_t = 0, sol_t = 0, save_t = 0;
 
     if (layer.gap_num - (layer.thread_num - 1) * part_length + 1 != left_gap_num) printf("THIS IS WRONG!\n");
 
@@ -157,9 +157,9 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
         }
 
         if (layer_num != 1) {
-            auto t0 = GET_TIME();
+            // auto t0 = GET_TIME();
             for (int j = i * GAP; j < i * GAP + WIN_SIZE; j++) src_pc[j - i * GAP] = (*layer.pcds[j]).makeShared();
-            load_t += GET_USED(GET_TIME(), t0);
+            // load_t += GET_USED(GET_TIME(), t0);
         }
 
         size_t mem_cost = 0;
@@ -314,11 +314,10 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
     }
     printf("total time: %.2fs\n", total_t);
     printf(
-        "load pcd %.2fs %.2f%% | undistort pcd %.2fs %.2f%% | "
-        "downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | trans %.2fs %.2f%% | solve %.2fs %.2f%% | "
-        "save pcd %.2fs %.2f%%\n",
-        load_t, load_t / total_t * 100, undis_t, undis_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t,
-        recut_t / total_t * 100, tran_t, tran_t / total_t * 100, sol_t, sol_t / total_t * 100, save_t, save_t / total_t * 100);
+        "load pcd %.2fs %.2f%% | downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | trans %.2fs %.2f%% | solve %.2fs %.2f%% | save pcd "
+        "%.2fs %.2f%%\n",
+        load_t, load_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t, recut_t / total_t * 100, tran_t,
+        tran_t / total_t * 100, sol_t, sol_t / total_t * 100, save_t, save_t / total_t * 100);
 }
 
 void global_ba(LAYER& layer) {
@@ -420,14 +419,21 @@ int main(int argc, char** argv) {
     YAML::Node config = YAML::LoadFile(config_path);
 
     // Access parameters
-    std::string data_path = config["data_path"].as<std::string>();
-    int total_layer_num = config["total_layer_num"].as<int>();
-    int thread_num = config["thread_num"].as<int>();
+    HBAConfig cfg;
+    cfg.data_path = config["data_path"].as<std::string>();
+    cfg.load_pose_name = config["load_pose_name"].as<std::string>();
+    cfg.save_pose_name = config["save_pose_name"].as<std::string>();
 
-    HBA hba(total_layer_num, data_path, thread_num);
+    cfg.total_layer_num = config["total_layer_num"].as<int>();
+    cfg.thread_num = config["thread_num"].as<int>();
+    cfg.voxel_size = config["voxel_size"].as<double>();
+    cfg.eigen_ratio = config["eigen_ratio"].as<double>();
+
+    HBA hba(cfg);
+
     printf("initial complete\n");
 
-    for (int i = 0; i < total_layer_num - 1; i++) {
+    for (int i = 0; i < cfg.total_layer_num - 1; i++) {
         std::cout << "---------------------" << std::endl;
         // 在 i 层和 i+1 层之间分配线程进行并行计算
         distribute_thread(hba.layers[i], hba.layers[i + 1]);
@@ -436,7 +442,7 @@ int main(int argc, char** argv) {
     }
     printf("distribute thread complete\n");
     // 全局优化
-    global_ba(hba.layers[total_layer_num - 1]);
+    global_ba(hba.layers[cfg.total_layer_num - 1]);
     hba.pose_graph_optimization();
     printf("iteration complete\n");
 }

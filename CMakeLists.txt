@@ -25,3 +25,6 @@ target_link_libraries(hba ${PCL_LIBRARIES} gtsam yaml-cpp)
 
 add_executable(visualize source/visualize.cpp)
 target_link_libraries(visualize ${PCL_LIBRARIES} yaml-cpp)
+
+add_executable(savepcd source/savepcd.cpp)
+target_link_libraries(savepcd ${PCL_LIBRARIES} yaml-cpp)

@@ -7,6 +7,7 @@
 #include "mypcl.hpp"
 #include "tools.hpp"
 #include <yaml-cpp/yaml.h>
+
 int main(int argc, char** argv) {
     std::string config_path = "../config/visualize.yaml";
     if (argc == 2) config_path = argv[1];
@@ -16,7 +17,6 @@ int main(int argc, char** argv) {
     std::string pose_bfr = config["pose_bfr"].as<std::string>();
     std::string pose_opt = config["pose_opt"].as<std::string>();
     double downsample_size = config["downsample_size"].as<double>();
-    bool save_pcd = config["save_pcd"].as<bool>();
 
     std::cout << "Data Path: " << data_path << std::endl;
 
@@ -56,11 +56,6 @@ int main(int argc, char** argv) {
     std::cout << "downsample : " << downsample_size << std::endl;
     downsample_voxel(*cloud_bfr, downsample_size);
     downsample_voxel(*cloud_opt, downsample_size);
-    if (save_pcd) {
-        std::cout << "save_pcd" << std::endl;
-        pcl::io::savePCDFileBinary(data_path + "cloud_bfr.pcd", *cloud_bfr);
-        pcl::io::savePCDFileBinary(data_path + "cloud_opt.pcd", *cloud_opt);
-    }
 
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
 

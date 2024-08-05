@@ -1,7 +1,9 @@
-data_path: "/home/qianliyue/D:/RepoMy/save/project/mtest/gnss/"
+data_path: "/home/qianliyue/D:/RepoMy/save/project/mtong/"
 
-pose_bfr: "traj_tum.txt"
-pose_opt: "poses_opt.txt"
+# pose_bfr: "traj_tum.txt"
+# pose_opt: "poses_opt.txt"
+
+pose_bfr: "poses_opt.txt"
+pose_opt: "poses_opt2.txt"
 
 downsample_size: 0.5
-save_pcd: false

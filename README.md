@@ -6,6 +6,8 @@ fork from https://github.com/hku-mars/HBA
 
 - 2.0 - 8.5 - 去除ROS依赖
 
+- 2.1 - 8.5 - 引出接口
+
 
 
 

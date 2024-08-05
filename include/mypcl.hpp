@@ -4,6 +4,7 @@
 #include <pcl/io/pcd_io.h>
 #include <Eigen/Dense>
 #include <string>
+#include <set>
 #include "tools.hpp"
 
 namespace mypcl {
@@ -88,11 +89,11 @@ double compute_inlier_ratio(std::vector<double> residuals, double ratio) {
 
 void write_pose(std::vector<pose>& pose_vec, std::string path) {
     std::ofstream file;
-    file.open(path + "poses_opt.txt", std::ofstream::trunc);
+    file.open(path, std::ofstream::trunc);
     file.close();
     Eigen::Quaterniond q0(pose_vec[0].q.w(), pose_vec[0].q.x(), pose_vec[0].q.y(), pose_vec[0].q.z());
     Eigen::Vector3d t0(pose_vec[0].t(0), pose_vec[0].t(1), pose_vec[0].t(2));
-    file.open(path + "poses_opt.txt", std::ofstream::app);
+    file.open(path, std::ofstream::app);
 
     for (size_t i = 0; i < pose_vec.size(); i++) {
         pose_vec[i].t << q0.inverse() * (pose_vec[i].t - t0);

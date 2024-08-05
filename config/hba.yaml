@@ -1,4 +1,18 @@
-data_path: "/home/qianliyue/D:/RepoMy/save/project/mtest/gnss/"
+data_path: "/home/qianliyue/D:/RepoMy/save/project/mtong/"
+
 
 total_layer_num: 3
-thread_num : 16
+thread_num: 16
+
+# 初次优化
+# load_pose_name: "traj_tum.txt"
+# save_pose_name: "poses_opt.txt"
+# voxel_size: 4.0
+# eigen_ratio: 0.1
+
+# 二次优化
+load_pose_name: "poses_opt.txt"
+save_pose_name: "poses_opt2.txt"
+voxel_size: 2.0
+eigen_ratio: 0.05
+

@@ -20,7 +20,7 @@ public:
 
     std::string data_path;
     vector<mypcl::pose> pose_vec;
-    std::vector<thread*> mthreads;
+    std::vector<thread *> mthreads;
     std::vector<double> mem_costs;
 
     std::vector<VEC(6)> hessians;
@@ -104,25 +104,48 @@ public:
     }
 };
 
+struct HBAConfig {
+    std::string data_path;
+    std::string load_pose_name;
+    std::string save_pose_name;
+
+    int total_layer_num;
+    int thread_num;
+
+    // Layer
+    int max_iter = 10;
+    double downsample_size = 0.1;
+    double voxel_size = 4.0;
+    double eigen_ratio = 0.1;
+    double reject_ratio = 0.05;
+};
+
 class HBA {
 public:
     int thread_num, total_layer_num;
     std::vector<LAYER> layers;
     std::string data_path;
 
-    HBA(int total_layer_num_, std::string data_path_, int thread_num_) {
-        total_layer_num = total_layer_num_;
-        thread_num = thread_num_;
-        data_path = data_path_;
+    HBAConfig cfg;
+
+    HBA(HBAConfig &cfg_) {
+        cfg = cfg_;
+
+        total_layer_num = cfg.total_layer_num;
+        thread_num = cfg.thread_num;
+        data_path = cfg.data_path;
 
         layers.resize(total_layer_num);
         for (int i = 0; i < total_layer_num; i++) {
             layers[i].layer_num = i + 1;
             layers[i].thread_num = thread_num;
+
+            layers[i].voxel_size = cfg.voxel_size;
+            layers[i].eigen_ratio = cfg.eigen_ratio;
         }
         // 第一层从外部进行读取
         layers[0].data_path = data_path;
-        layers[0].pose_vec = mypcl::read_pose(data_path + "traj_tum.txt");
+        layers[0].pose_vec = mypcl::read_pose(data_path + cfg.load_pose_name);
         layers[0].init_parameter();
         layers[0].init_storage(total_layer_num);
         // 其它层基于前一层进行初始化，设置新数据路径？
@@ -231,7 +254,7 @@ public:
             gtsam::Pose3 pose = results.at(i).cast<gtsam::Pose3>();
             assign_qt(init_pose[i].q, init_pose[i].t, Eigen::Quaterniond(pose.rotation().matrix()), pose.translation());
         }
-        mypcl::write_pose(init_pose, data_path);
+        mypcl::write_pose(init_pose, data_path + cfg.save_pose_name);
         printf("pgo complete\n");
     }
 };
