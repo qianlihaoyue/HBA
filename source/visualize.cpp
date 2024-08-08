@@ -63,6 +63,7 @@ int main(int argc, char** argv) {
     viewer->createViewPort(0.0, 0.0, 0.5, 1.0, viewport1);
     viewer->createViewPort(0.5, 0.0, 1.0, 1.0, viewport2);
 
+    // PointCloud
     pcl::visualization::PointCloudColorHandlerGenericField<PointType> intensity_bfr(cloud_bfr, "intensity");
     pcl::visualization::PointCloudColorHandlerGenericField<PointType> intensity_opt(cloud_opt, "intensity");
 
@@ -72,6 +73,13 @@ int main(int argc, char** argv) {
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "cloud_bfr");
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "cloud_opt");
 
+    // Poses
+    viewer->addPointCloud<PointType>(pose_cloud_bfr, "pose_cloud_bfr", viewport1);
+    viewer->addPointCloud<PointType>(pose_cloud_opt, "pose_cloud_opt", viewport2);
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "pose_cloud_bfr", viewport1);
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "pose_cloud_opt", viewport2);
+
+    // Text
     viewer->addText("cloud_bfr", 10, 10, 30, 1.0, 1.0, 1.0, "cloud_bfr", viewport1);
     viewer->addText("cloud_opt", 10, 10, 30, 1.0, 1.0, 1.0, "cloud_opt", viewport2);
 

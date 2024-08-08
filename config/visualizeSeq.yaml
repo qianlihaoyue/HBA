@@ -1,0 +1,7 @@
+data_path: "/home/qianliyue/D:/RepoMy/save/project/mtong/"
+
+pose_opt: "poses_opt.txt"
+
+downsample_size: 0.1
+
+color_inversion : true

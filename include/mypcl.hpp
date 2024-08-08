@@ -16,10 +16,6 @@ struct pose {
 
 std::vector<std::string> time_vec;
 
-void loadPCD(std::string filePath, int pcd_fill_num, pcl::PointCloud<PointType>::Ptr& pc, int num, std::string prefix = "") {
-    pcl::io::loadPCDFile(filePath + prefix + std::to_string(num) + ".pcd", *pc);
-}
-
 std::vector<pose> read_pose(std::string filename) {
     std::vector<pose> pose_vec;
     std::fstream file;
@@ -51,22 +47,6 @@ void transform_pointcloud(pcl::PointCloud<PointType>& pc_in, pcl::PointCloud<Poi
     }
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr append_cloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc1, pcl::PointCloud<pcl::PointXYZRGB> pc2) {
-    size_t size1 = pc1->points.size();
-    size_t size2 = pc2.points.size();
-    pc1->points.resize(size1 + size2);
-    for (size_t i = size1; i < size1 + size2; i++) {
-        pc1->points[i].x = pc2.points[i - size1].x;
-        pc1->points[i].y = pc2.points[i - size1].y;
-        pc1->points[i].z = pc2.points[i - size1].z;
-        pc1->points[i].r = pc2.points[i - size1].r;
-        pc1->points[i].g = pc2.points[i - size1].g;
-        pc1->points[i].b = pc2.points[i - size1].b;
-        // pc1->points[i].intensity = pc2.points[i-size1].intensity;
-    }
-    return pc1;
-}
-
 pcl::PointCloud<PointType>::Ptr append_cloud(pcl::PointCloud<PointType>::Ptr pc1, pcl::PointCloud<PointType> pc2) {
     size_t size1 = pc1->points.size();
     size_t size2 = pc2.points.size();
@@ -79,13 +59,12 @@ pcl::PointCloud<PointType>::Ptr append_cloud(pcl::PointCloud<PointType>::Ptr pc1
     return pc1;
 }
 
-double compute_inlier_ratio(std::vector<double> residuals, double ratio) {
-    std::set<double> dis_vec;
-    for (size_t i = 0; i < (size_t)(residuals.size() / 3); i++)
-        dis_vec.insert(fabs(residuals[3 * i + 0]) + fabs(residuals[3 * i + 1]) + fabs(residuals[3 * i + 2]));
-
-    return *(std::next(dis_vec.begin(), (int)((ratio)*dis_vec.size())));
-}
+// double compute_inlier_ratio(std::vector<double> residuals, double ratio) {
+//     std::set<double> dis_vec;
+//     for (size_t i = 0; i < (size_t)(residuals.size() / 3); i++)
+//         dis_vec.insert(fabs(residuals[3 * i + 0]) + fabs(residuals[3 * i + 1]) + fabs(residuals[3 * i + 2]));
+//     return *(std::next(dis_vec.begin(), (int)((ratio)*dis_vec.size())));
+// }
 
 void write_pose(std::vector<pose>& pose_vec, std::string path) {
     std::ofstream file;
@@ -94,6 +73,7 @@ void write_pose(std::vector<pose>& pose_vec, std::string path) {
     Eigen::Quaterniond q0(pose_vec[0].q.w(), pose_vec[0].q.x(), pose_vec[0].q.y(), pose_vec[0].q.z());
     Eigen::Vector3d t0(pose_vec[0].t(0), pose_vec[0].t(1), pose_vec[0].t(2));
     file.open(path, std::ofstream::app);
+    std::cout << "save pose to: " << path << std::endl;
 
     for (size_t i = 0; i < pose_vec.size(); i++) {
         pose_vec[i].t << q0.inverse() * (pose_vec[i].t - t0);

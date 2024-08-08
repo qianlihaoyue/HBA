@@ -136,7 +136,7 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
     int& layer_num = layer.layer_num;
     int& left_gap_num = layer.left_gap_num;
 
-    double load_t = 0, dsp_t = 0, cut_t = 0, recut_t = 0, total_t = 0, tran_t = 0, sol_t = 0, save_t = 0;
+    double load_t = 0, dsp_t = 0, cut_t = 0, recut_t = 0, total_t = 0, sol_t = 00;
 
     if (layer.gap_num - (layer.thread_num - 1) * part_length + 1 != left_gap_num) printf("THIS IS WRONG!\n");
 
@@ -157,9 +157,7 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
         }
 
         if (layer_num != 1) {
-            // auto t0 = GET_TIME();
             for (int j = i * GAP; j < i * GAP + WIN_SIZE; j++) src_pc[j - i * GAP] = (*layer.pcds[j]).makeShared();
-            // load_t += GET_USED(GET_TIME(), t0);
         }
 
         size_t mem_cost = 0;
@@ -193,10 +191,8 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
             for (auto iter = surf_map.begin(); iter != surf_map.end(); ++iter) iter->second->recut();
             recut_t += GET_USED(GET_TIME(), t0);
 
-            t0 = GET_TIME();
             VOX_HESS voxhess(WIN_SIZE);
             for (auto iter = surf_map.begin(); iter != surf_map.end(); iter++) iter->second->tras_opt(voxhess);
-            tran_t += GET_USED(GET_TIME(), t0);
 
             VOX_OPTIMIZER opt_lsv(WIN_SIZE);
             t0 = GET_TIME();
@@ -220,7 +216,6 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
 
         pcl::PointCloud<PointType>::Ptr pc_keyframe(new pcl::PointCloud<PointType>);
         for (size_t j = 0; j < WIN_SIZE; j++) {
-            auto t0 = GET_TIME();
             Eigen::Quaterniond q_tmp;
             Eigen::Vector3d t_tmp;
             assign_qt(q_tmp, t_tmp, Quaterniond(x_buf[0].R.inverse() * x_buf[j].R), x_buf[0].R.inverse() * (x_buf[j].p - x_buf[0].p));
@@ -228,15 +223,12 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
             pcl::PointCloud<PointType>::Ptr pc_oneframe(new pcl::PointCloud<PointType>);
             mypcl::transform_pointcloud(*src_pc[j], *pc_oneframe, t_tmp, q_tmp);
             pc_keyframe = mypcl::append_cloud(pc_keyframe, *pc_oneframe);
-            save_t += GET_USED(GET_TIME(), t0);
         }
         auto t0 = GET_TIME();
         downsample_voxel(*pc_keyframe, 0.05);
         dsp_t += GET_USED(GET_TIME(), t0);
 
-        t0 = GET_TIME();
         next_layer.pcds[i] = pc_keyframe;
-        save_t += GET_USED(GET_TIME(), t0);
 
         total_t += GET_USED(GET_TIME(), t_begin);
     }
@@ -314,10 +306,8 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
     }
     printf("total time: %.2fs\n", total_t);
     printf(
-        "load pcd %.2fs %.2f%% | downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | trans %.2fs %.2f%% | solve %.2fs %.2f%% | save pcd "
-        "%.2fs %.2f%%\n",
-        load_t, load_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t, recut_t / total_t * 100, tran_t,
-        tran_t / total_t * 100, sol_t, sol_t / total_t * 100, save_t, save_t / total_t * 100);
+        "load pcd %.2fs %.2f%% | downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | solve %.2fs %.2f%%\n",
+        load_t, load_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t, recut_t / total_t * 100, sol_t, sol_t / total_t * 100);
 }
 
 void global_ba(LAYER& layer) {
@@ -334,7 +324,7 @@ void global_ba(LAYER& layer) {
 
     double residual_cur = 0, residual_pre = 0;
     size_t mem_cost = 0, max_mem = 0;
-    double dsp_t = 0, cut_t = 0, recut_t = 0, tran_t = 0, sol_t = 0, t0;
+    double dsp_t = 0, cut_t = 0, recut_t = 0, sol_t = 0, t0;
     for (int loop = 0; loop < layer.max_iter; loop++) {
         std::cout << "---------------------" << std::endl;
         std::cout << "Iteration " << loop << std::endl;
@@ -353,10 +343,8 @@ void global_ba(LAYER& layer) {
         for (auto iter = surf_map.begin(); iter != surf_map.end(); ++iter) iter->second->recut();
         recut_t += GET_USED(GET_TIME(), t0);
 
-        t0 = GET_TIME();
         VOX_HESS voxhess(window_size);
         for (auto iter = surf_map.begin(); iter != surf_map.end(); ++iter) iter->second->tras_opt(voxhess);
-        tran_t += GET_USED(GET_TIME(), t0);
 
         t0 = GET_TIME();
         VOX_OPTIMIZER opt_lsv(window_size);
@@ -390,26 +378,23 @@ void global_ba(LAYER& layer) {
         layer.pose_vec[i].q = Quaterniond(x_buf[i].R);
         layer.pose_vec[i].t = x_buf[i].p;
     }
-    printf("Downsample: %f, Cut: %f, Recut: %f, Tras: %f, Sol: %f\n", dsp_t, cut_t, recut_t, tran_t, sol_t);
+    printf("Downsample: %f, Cut: %f, Recut: %f, Sol: %f\n", dsp_t, cut_t, recut_t, sol_t);
 }
 
 // 创建并分配线程任务
 void distribute_thread(LAYER& layer, LAYER& next_layer) {
     int& thread_num = layer.thread_num;
-    // double t0 = ros::Time::now().toSec();
+    
     for (int i = 0; i < thread_num; i++)
         if (i < thread_num - 1)
             layer.mthreads[i] = new thread(parallel_comp, ref(layer), i, ref(next_layer));
         else
             layer.mthreads[i] = new thread(parallel_tail, ref(layer), i, ref(next_layer));
-    // printf("Thread distribution time: %f\n", ros::Time::now().toSec()-t0);
 
-    // t0 = ros::Time::now().toSec();
     for (int i = 0; i < thread_num; i++) {
         layer.mthreads[i]->join();
         delete layer.mthreads[i];
     }
-    // printf("Thread join time: %f\n", ros::Time::now().toSec()-t0);
 }
 
 #include <yaml-cpp/yaml.h>

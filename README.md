@@ -8,6 +8,8 @@ fork from https://github.com/hku-mars/HBA
 
 - 2.1 - 8.5 - 引出接口
 
+- 2.2 - 8.8 - 添加可视化
+
 
 
 
