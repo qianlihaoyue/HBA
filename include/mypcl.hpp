@@ -14,13 +14,13 @@ struct pose {
     Eigen::Vector3d t;
 };
 
-std::vector<std::string> time_vec;
+std::vector<double> time_vec;
 
 std::vector<pose> read_pose(std::string filename) {
     std::vector<pose> pose_vec;
     std::fstream file;
     file.open(filename);
-    std::string time;
+    double time;
     double tx, ty, tz, w, x, y, z;
     while (file >> time >> tx >> ty >> tz >> x >> y >> z >> w) {
         Eigen::Quaterniond q(w, x, y, z);

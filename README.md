@@ -10,6 +10,7 @@ fork from https://github.com/hku-mars/HBA
 
 - 2.2 - 8.8 - 添加可视化
 
+- 2.3 - 8.15 - 添加回环
 
 
 

@@ -305,9 +305,8 @@ void parallel_tail(LAYER& layer, int thread_id, LAYER& next_layer) {
         next_layer.pcds[i] = pc_keyframe;
     }
     printf("total time: %.2fs\n", total_t);
-    printf(
-        "load pcd %.2fs %.2f%% | downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | solve %.2fs %.2f%%\n",
-        load_t, load_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t, recut_t / total_t * 100, sol_t, sol_t / total_t * 100);
+    printf("load pcd %.2fs %.2f%% | downsample %.2fs %.2f%% | cut voxel %.2fs %.2f%% | recut %.2fs %.2f%% | solve %.2fs %.2f%%\n", load_t,
+           load_t / total_t * 100, dsp_t, dsp_t / total_t * 100, cut_t, cut_t / total_t * 100, recut_t, recut_t / total_t * 100, sol_t, sol_t / total_t * 100);
 }
 
 void global_ba(LAYER& layer) {
@@ -384,7 +383,7 @@ void global_ba(LAYER& layer) {
 // 创建并分配线程任务
 void distribute_thread(LAYER& layer, LAYER& next_layer) {
     int& thread_num = layer.thread_num;
-    
+
     for (int i = 0; i < thread_num; i++)
         if (i < thread_num - 1)
             layer.mthreads[i] = new thread(parallel_comp, ref(layer), i, ref(next_layer));
@@ -413,6 +412,7 @@ int main(int argc, char** argv) {
     cfg.thread_num = config["thread_num"].as<int>();
     cfg.voxel_size = config["voxel_size"].as<double>();
     cfg.eigen_ratio = config["eigen_ratio"].as<double>();
+    cfg.use_loop_closure = config["use_loop_closure"].as<bool>();
 
     HBA hba(cfg);
 

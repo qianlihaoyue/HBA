@@ -9,6 +9,12 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/nonlinear/ISAM2.h>
 
+#include <pcl/registration/icp.h>
+#include <pcl/registration/ndt.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/common/transforms.h>
+#include <tuple>
+
 #include "mypcl.hpp"
 #include "tools.hpp"
 #include "ba.hpp"
@@ -118,6 +124,12 @@ struct HBAConfig {
     double voxel_size = 4.0;
     double eigen_ratio = 0.1;
     double reject_ratio = 0.05;
+
+    // loop closure
+    double time_threshold = 30.0;
+    double distance_threshold = 15.0;
+    bool use_loop_closure = true;
+    double minFitnessScore = 0.5;
 };
 
 class HBA {
@@ -125,6 +137,8 @@ public:
     int thread_num, total_layer_num;
     std::vector<LAYER> layers;
     std::string data_path;
+
+    std::map<int, int> loopClosures;
 
     HBAConfig cfg;
 
@@ -173,6 +187,51 @@ public:
                 }
     }
 
+    // 标记近点并返回配对点
+    std::vector<std::pair<int, int>> markClosePoints(const std::vector<mypcl::pose> &init_pose, double threshold = 1.0) {
+        pcl::PointCloud<PointType>::Ptr pose_cloud(new pcl::PointCloud<PointType>());
+        for (const auto &p : init_pose) {
+            PointType pt;
+            pt.x = p.t.x(), pt.y = p.t.y(), pt.z = 0;  // p.t.z();
+            pose_cloud->points.emplace_back(pt);
+        }
+        pcl::KdTreeFLANN<PointType>::Ptr pose_tree(new pcl::KdTreeFLANN<PointType>);
+        pose_tree->setInputCloud(pose_cloud);
+
+        std::vector<bool> marked_points(init_pose.size(), false);
+        std::vector<std::pair<int, int>> close_pairs;
+
+        // 遍历每个点，查找近点
+        for (size_t i = 0; i < init_pose.size(); i += 1) {
+            auto &searchPoint = pose_cloud->points[i];
+
+            std::vector<int> indices;
+            std::vector<float> distances;
+            pose_tree->radiusSearch(searchPoint, threshold, indices, distances);
+
+            // 存储距离和索引的列表
+            std::vector<std::pair<double, int>> dist_list;
+            for (const auto &idx : indices) {
+                if (idx != i) dist_list.emplace_back(distances[idx], idx);
+            }
+
+            // 按从近到远排序
+            std::sort(dist_list.begin(), dist_list.end());
+
+            for (const auto &[dis, idx] : dist_list) {
+                if (!marked_points[i] && fabs(mypcl::time_vec[idx] - mypcl::time_vec[i]) > 300) {  // 排除最近序列
+                    if (!marked_points[idx]) {                                                     // 未被标记
+                        close_pairs.emplace_back(i, idx);
+                        marked_points[i] = marked_points[idx] = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return close_pairs;
+    }
+
     void pose_graph_optimization() {
         std::vector<mypcl::pose> upper_pose, init_pose;
         upper_pose = layers[total_layer_num - 1].pose_vec;
@@ -193,28 +252,28 @@ public:
         for (uint i = 0; i < init_pose.size(); i++) {
             if (i > 0) initial.insert(i, gtsam::Pose3(gtsam::Rot3(init_pose[i].q.toRotationMatrix()), gtsam::Point3(init_pose[i].t)));
 
-            if (i % GAP == 0)
-                for (int j = 0; j < WIN_SIZE - 1; j++)
-                    for (int k = j + 1; k < WIN_SIZE; k++) {
-                        if (i + j + 1 >= init_pose.size() || i + k >= init_pose.size()) break;
+            // if (i % GAP == 0)
+            for (int j = 0; j < WIN_SIZE - 1; j++)
+                for (int k = j + 1; k < WIN_SIZE; k++) {
+                    if (i + j + 1 >= init_pose.size() || i + k >= init_pose.size()) break;
 
-                        cnt++;
-                        if (init_cov[cnt - 1].norm() < 1e-20) continue;
+                    cnt++;
+                    if (init_cov[cnt - 1].norm() < 1e-20) continue;
 
-                        Eigen::Vector3d t_ab = init_pose[i + j].t;
-                        Eigen::Matrix3d R_ab = init_pose[i + j].q.toRotationMatrix();
-                        t_ab = R_ab.transpose() * (init_pose[i + k].t - t_ab);
-                        R_ab = R_ab.transpose() * init_pose[i + k].q.toRotationMatrix();
-                        gtsam::Rot3 R_sam(R_ab);
-                        gtsam::Point3 t_sam(t_ab);
+                    Eigen::Vector3d t_ab = init_pose[i + j].t;
+                    Eigen::Matrix3d R_ab = init_pose[i + j].q.toRotationMatrix();
+                    t_ab = R_ab.transpose() * (init_pose[i + k].t - t_ab);
+                    R_ab = R_ab.transpose() * init_pose[i + k].q.toRotationMatrix();
+                    gtsam::Rot3 R_sam(R_ab);
+                    gtsam::Point3 t_sam(t_ab);
 
-                        Vector6 << fabs(1.0 / init_cov[cnt - 1](0)), fabs(1.0 / init_cov[cnt - 1](1)), fabs(1.0 / init_cov[cnt - 1](2)),
-                            fabs(1.0 / init_cov[cnt - 1](3)), fabs(1.0 / init_cov[cnt - 1](4)), fabs(1.0 / init_cov[cnt - 1](5));
-                        gtsam::noiseModel::Diagonal::shared_ptr odometryNoise = gtsam::noiseModel::Diagonal::Variances(Vector6);
-                        gtsam::NonlinearFactor::shared_ptr factor(
-                            new gtsam::BetweenFactor<gtsam::Pose3>(i + j, i + k, gtsam::Pose3(R_sam, t_sam), odometryNoise));
-                        graph.push_back(factor);
-                    }
+                    Vector6 << fabs(1.0 / init_cov[cnt - 1](0)), fabs(1.0 / init_cov[cnt - 1](1)), fabs(1.0 / init_cov[cnt - 1](2)),
+                        fabs(1.0 / init_cov[cnt - 1](3)), fabs(1.0 / init_cov[cnt - 1](4)), fabs(1.0 / init_cov[cnt - 1](5));
+                    gtsam::noiseModel::Diagonal::shared_ptr odometryNoise = gtsam::noiseModel::Diagonal::Variances(Vector6);
+                    gtsam::NonlinearFactor::shared_ptr factor(
+                        new gtsam::BetweenFactor<gtsam::Pose3>(i + j, i + k, gtsam::Pose3(R_sam, t_sam), odometryNoise));
+                    graph.push_back(factor);
+                }
         }
 
         int pose_size = upper_pose.size();
@@ -238,6 +297,71 @@ public:
                     i * pow(GAP, total_layer_num - 1), j * pow(GAP, total_layer_num - 1), gtsam::Pose3(R_sam, t_sam), odometryNoise));
                 graph.push_back(factor);
             }
+
+        std::vector<std::pair<int, int>> loopPairs;
+        // for (const auto &loopClosure : loopClosures)
+        if (cfg.use_loop_closure) loopPairs = markClosePoints(init_pose, 2.0);
+
+        for (auto &loop : loopPairs) {
+            int i = loop.first, j = loop.second;
+            if (i > j) std::swap(i, j);
+
+            pcl::PointCloud<PointType>::Ptr cloud_j(new pcl::PointCloud<PointType>());
+            pcl::io::loadPCDFile(layers[0].data_path + "Scans/" + std::to_string(j) + ".pcd", *cloud_j);
+
+            // auto &cloud_j = layers[0].pcds[j];
+
+            pcl::PointCloud<PointType>::Ptr global_j(new pcl::PointCloud<PointType>());
+            Eigen::Matrix4d transform_j = (Eigen::Matrix4d() << init_pose[j].q.toRotationMatrix(), init_pose[j].t, 0, 0, 0, 1).finished();
+            pcl::transformPointCloud(*cloud_j, *global_j, transform_j);
+
+            pcl::PointCloud<PointType>::Ptr pc_keyframe(new pcl::PointCloud<PointType>);
+            for (int k = -5; k < 5; k++) {
+                if (i + k < 0) continue;
+
+                pcl::PointCloud<PointType>::Ptr cloud_i(new pcl::PointCloud<PointType>());
+                pcl::io::loadPCDFile(layers[0].data_path + "Scans/" + std::to_string(i + k) + ".pcd", *cloud_i);
+
+                // auto &cloud_i = layers[0].pcds[i];
+                Eigen::Matrix4d transform = (Eigen::Matrix4d() << init_pose[i + k].q.toRotationMatrix(), init_pose[i + k].t, 0, 0, 0, 1).finished();
+
+                pcl::PointCloud<PointType>::Ptr pc_oneframe(new pcl::PointCloud<PointType>);
+                pcl::transformPointCloud(*cloud_i, *pc_oneframe, transform);
+
+                *pc_keyframe += *pc_oneframe;
+            }
+
+            pcl::GeneralizedIterativeClosestPoint<PointType, PointType> gicp;
+            gicp.setMaximumIterations(100);
+            gicp.setTransformationEpsilon(1e-6);
+            gicp.setMaxCorrespondenceDistance(50.0);
+            gicp.setEuclideanFitnessEpsilon(1e-6);
+
+            gicp.setInputSource(global_j);
+            gicp.setInputTarget(pc_keyframe);
+
+            pcl::PointCloud<PointType>::Ptr output_cloud(new pcl::PointCloud<PointType>());
+            gicp.align(*output_cloud);
+
+            double fitnessScore = gicp.getFitnessScore();
+
+            std::cout << "loop " << i << " & " << j << " score: " << fitnessScore << std::endl;
+            if (fitnessScore < cfg.minFitnessScore) {
+                printf("fitness score: %lf\n", fitnessScore);
+                // printf("loop closure: %d %d\n", i, j);
+
+                Eigen::Matrix4d transform_new_j = gicp.getFinalTransformation().cast<double>() * transform_j;
+                gtsam::Pose3 pose_j(gtsam::Rot3(transform_new_j.block<3, 3>(0, 0)), gtsam::Point3(transform_new_j.block<3, 1>(0, 3)));
+
+                Eigen::Matrix4d transform_i = (Eigen::Matrix4d() << init_pose[i].q.toRotationMatrix(), init_pose[i].t, 0, 0, 0, 1).finished();
+                gtsam::Pose3 pose_i(gtsam::Rot3(transform_i.block<3, 3>(0, 0)), gtsam::Point3(transform_i.block<3, 1>(0, 3)));
+
+                Vector6 << 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6;
+                gtsam::noiseModel::Diagonal::shared_ptr loopClosureNoise = gtsam::noiseModel::Diagonal::Variances(Vector6);
+                gtsam::NonlinearFactor::shared_ptr loopFactor(new gtsam::BetweenFactor<gtsam::Pose3>(j, i, pose_j.between(pose_i), loopClosureNoise));
+                graph.push_back(loopFactor);
+            }
+        }
 
         gtsam::ISAM2Params parameters;
         parameters.relinearizeThreshold = 0.01;

@@ -6,6 +6,7 @@
 
 #include "mypcl.hpp"
 #include "tools.hpp"
+#include <string>
 #include <yaml-cpp/yaml.h>
 
 int main(int argc, char** argv) {
@@ -15,7 +16,6 @@ int main(int argc, char** argv) {
 
     std::string data_path = config["data_path"].as<std::string>();
     std::string pose_opt = config["pose_opt"].as<std::string>();
-    double downsample_size = config["downsample_size"].as<double>();
 
     std::cout << "Data Path: " << data_path << std::endl;
     std::vector<mypcl::pose> pose_vec_opt = mypcl::read_pose(data_path + pose_opt);
@@ -32,9 +32,13 @@ int main(int argc, char** argv) {
         if (i % 100 == 0) std::cout << "load " << i << std::endl;
     }
 
-    std::cout << "downsample : " << downsample_size << std::endl;
-    downsample_voxel(*cloud_opt, downsample_size);
+    std::cout << "downsample & save_pcd" << std::endl;
+    // downsample_voxel(*cloud_opt, 0.05);
+    // pcl::io::savePCDFileBinary(data_path + "scans-0.05.pcd", *cloud_opt);
 
-    std::cout << "save_pcd" << std::endl;
-    pcl::io::savePCDFileBinary(data_path + "scans.pcd", *cloud_opt);
+    downsample_voxel(*cloud_opt, 0.125);
+    pcl::io::savePCDFileBinary(data_path + "scans-0.125.pcd", *cloud_opt);
+
+    downsample_voxel(*cloud_opt, 0.25);
+    pcl::io::savePCDFileBinary(data_path + "scans-0.25.pcd", *cloud_opt);
 }
