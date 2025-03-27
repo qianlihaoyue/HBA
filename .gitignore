@@ -1,5 +1,6 @@
 # folder
 # thirdparty/
+.cache/
 log/
 result/
 PCD/

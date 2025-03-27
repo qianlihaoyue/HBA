@@ -4,6 +4,8 @@ data_path: "/home/qianliyue/D:/RepoMy/save/project/mtong/"
 total_layer_num: 3
 thread_num: 16
 
+use_loop_closure: false
+
 # 初次优化
 # load_pose_name: "traj_tum.txt"
 # save_pose_name: "poses_opt.txt"

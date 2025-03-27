@@ -1,3 +1,4 @@
+#include <pcl/visualization/common/common.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -62,6 +63,10 @@ int main(int argc, char** argv) {
     int viewport1(0), viewport2(1);
     viewer->createViewPort(0.0, 0.0, 0.5, 1.0, viewport1);
     viewer->createViewPort(0.5, 0.0, 1.0, 1.0, viewport2);
+
+    // 设置背景颜色为白色
+    viewer->setBackgroundColor(1.0, 1.0, 1.0, viewport1);
+    viewer->setBackgroundColor(1.0, 1.0, 1.0, viewport2); 
 
     // PointCloud
     pcl::visualization::PointCloudColorHandlerGenericField<PointType> intensity_bfr(cloud_bfr, "intensity");

@@ -12,7 +12,7 @@ fork from https://github.com/hku-mars/HBA
 
 - 2.3 - 8.15 - 添加回环
 
-
+- 2.4 - 3.27 - fix bug
 
 
 ## **1. Introduction**
